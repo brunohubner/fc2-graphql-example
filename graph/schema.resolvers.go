@@ -9,37 +9,113 @@ import (
 	"fmt"
 
 	"github.com/brunohubner/fc2-graphql-example/graph/model"
+	"github.com/google/uuid"
 )
+
+// Courses is the resolver for the courses field.
+func (r *categoryResolver) Courses(ctx context.Context, obj *model.Category) ([]*model.Course, error) {
+	var courses []*model.Course
+
+	for _, v := range r.Resolver.Courses {
+		if v.Category.ID == obj.ID {
+			courses = append(courses, v)
+		}
+	}
+
+	return courses, nil
+}
+
+// Chapters is the resolver for the chapters field.
+func (r *courseResolver) Chapters(ctx context.Context, obj *model.Course) ([]*model.Chapter, error) {
+	var chapters []*model.Chapter
+
+	for _, v := range r.Resolver.Chapters {
+		if v.Course.ID == obj.ID {
+			chapters = append(chapters, v)
+		}
+	}
+
+	return chapters, nil
+}
 
 // CreateCategory is the resolver for the createCategory field.
 func (r *mutationResolver) CreateCategory(ctx context.Context, input model.NewCategory) (*model.Category, error) {
-	panic(fmt.Errorf("not implemented: CreateCategory - createCategory"))
+	category := model.Category{
+		ID:          fmt.Sprint(uuid.New()),
+		Name:        input.Name,
+		Description: &input.Description,
+	}
+
+	r.Categories = append(r.Categories, &category)
+
+	return &category, nil
 }
 
 // CreateCourse is the resolver for the createCourse field.
 func (r *mutationResolver) CreateCourse(ctx context.Context, input model.NewCourse) (*model.Course, error) {
-	panic(fmt.Errorf("not implemented: CreateCourse - createCourse"))
+	var category *model.Category
+
+	for _, v := range r.Categories {
+		if v.ID == input.CategoryID {
+			category = v
+			break
+		}
+	}
+
+	course := model.Course{
+		ID:          fmt.Sprint(uuid.New()),
+		Name:        input.Name,
+		Description: &input.Description,
+		Category:    category,
+	}
+
+	r.Courses = append(r.Courses, &course)
+
+	return &course, nil
 }
 
 // CreateChapter is the resolver for the createChapter field.
 func (r *mutationResolver) CreateChapter(ctx context.Context, input model.NewChapter) (*model.Chapter, error) {
-	panic(fmt.Errorf("not implemented: CreateChapter - createChapter"))
+	var course *model.Course
+
+	for _, v := range r.Courses {
+		if v.ID == input.CourseID {
+			course = v
+			break
+		}
+	}
+
+	chapter := model.Chapter{
+		ID:     fmt.Sprint(uuid.New()),
+		Name:   input.Name,
+		Course: course,
+	}
+
+	r.Chapters = append(r.Chapters, &chapter)
+
+	return &chapter, nil
 }
 
 // Categories is the resolver for the categories field.
 func (r *queryResolver) Categories(ctx context.Context) ([]*model.Category, error) {
-	panic(fmt.Errorf("not implemented: Categories - categories"))
+	return r.Resolver.Categories, nil
 }
 
 // Courses is the resolver for the courses field.
 func (r *queryResolver) Courses(ctx context.Context) ([]*model.Course, error) {
-	panic(fmt.Errorf("not implemented: Courses - courses"))
+	return r.Resolver.Courses, nil
 }
 
 // Chapters is the resolver for the chapters field.
 func (r *queryResolver) Chapters(ctx context.Context) ([]*model.Chapter, error) {
-	panic(fmt.Errorf("not implemented: Chapters - chapters"))
+	return r.Resolver.Chapters, nil
 }
+
+// Category returns CategoryResolver implementation.
+func (r *Resolver) Category() CategoryResolver { return &categoryResolver{r} }
+
+// Course returns CourseResolver implementation.
+func (r *Resolver) Course() CourseResolver { return &courseResolver{r} }
 
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
@@ -47,5 +123,7 @@ func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
+type categoryResolver struct{ *Resolver }
+type courseResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
